@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="home-container">
+
+    <div class="logout-container">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('login.logout') }}">Logout</a>
+        {% endif %}
+    </div>
+
+    <h1>Welcome to Lost and Found!</h1>
+    <p>Hi there, I hope you'll find whatever it is you are looking for.</p>
+
+    {% if current_user.is_authenticated %}
+        <div class="action-buttons">
+            <a href="{{ url_for('reports.new_report') }}">Report an Item</a>
+            <a href="{{ url_for('home.search_items') }}">Look for Lost Item</a>
+        </div>
+
+        <section class="recent-listings">
+            <h2>Recent Listings</h2>
+                {% if recent_listings %}
+            <div class="listings-grid">
+                {% for item in recent_listings %}
+                <div class="listing-item">
+                    {# Check if image_filename exists before constructing the URL #}
+                    {% if item.image_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' + item.image_filename) }}" alt="Item Image">
+                    {% else %}
+                        {# Optionally, display a placeholder image #}
+                        <img src="{{ url_for('static', filename='uploads/default.jpg') }}" alt="Placeholder Image">
+                    {% endif %}
+
+                    <div class="item-details">
+                        <h3><a href="{{ url_for('home.item_detail', item_id=item.id) }}">{{ item.title }}</a></h3>
+                        <p>{{ item.description }}</p>
+                        <p>Location: {{ item.location_found }}</p>
+                        <p>Date Reported: {{ item.date_reported.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+
+                        {# --- CLAIM STATUS --- #}
+                        {% if item.claims %}
+                            {% set claim = item.claims[0] %}
+                            <p><strong>Claim Status:</strong>
+                                {% if claim.claim_status == 'pending' %}
+                                    <span class="text-warning">Pending Review</span>
+                                {% elif claim.claim_status == 'approved' %}
+                                    <span class="text-success">Approved</span>
+                                {% elif claim.claim_status == 'rejected' %}
+                                    <span class="text-danger">Rejected</span>
+                                {% else %}
+                                    {{ claim.claim_status }}
+                                {% endif %}
+                            </p>
+                        {% else %}
+                            <p>Status: Available</p>
+                        {% endif %}
+                        {# --- END CLAIM STATUS --- #}
+
+                         {# --- CLAIM BUTTON (Conditional) --- #}
+                        {% if current_user.is_authenticated and current_user.id != item.reporter.id %}
+                            {% if not item.claims or (item.claims and item.claims[0].claim_status == 'rejected') %}
+                                <a href="{{ url_for('claims.claim_item', item_id=item.id) }}" class="btn btn-success">Claim Item</a>
+                            {% endif %}
+                        {% endif %}
+                        {# --- END CLAIM BUTTON --- #}
+
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+                {% else %}
+                    <p>No items have been reported yet.</p>
+                {% endif %}
+        </section>
+    {% else %}
+        <p>Please <a href="{{ url_for('login.login') }}">log in</a> or <a href="{{ url_for('registration.register') }}">register</a> to report or claim items.</p>
+    {% endif %}
+</div>
+{% endblock %}
